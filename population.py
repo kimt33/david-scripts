@@ -11,16 +11,19 @@ from horton.log import log
 
 log.set_level(2)
 
+# TODO: probably smarter to use h5py instead of pickle (since i'm using dictionary of dictionaries anyways)
 def run_calc(fchkfile):
     mol = Molecule.from_file(fchkfile)
+    mol.orthogonalize()
     outname = splitext(fchkfile)[0]+'_pop.p'
     basis_list = ['aambs', 'anorcc', 'minao', 'sto-6g', '631g']
     quasi_list = ['quambo','quao','iao1','iao2']
-    names = ['atomic basis',]
-    newbasis_flat = [LCGOBasis(mol.obasis).N, ]
-    # TODO: NORMALIZE MO'S and AB's!
+    orth_list = ['orth', 'north']
+    names = ['atomic basis', 'orth atomic basis']
+    newbasis_flat = [LCGOBasis(mol.obasis).N, LCGOBasis(mol.obasis).orth_all,]
+    # TODO: NORMALIZE and INTRATOMICALLY ORTHOGONALIZE AB's!
     # transformations
-    newbasis = {k:{j:{i:None for i in ['quambo','quao','iao1','iao2','quasi']} for j in ['normal','special']} for k in basis_list} 
+    newbasis = {k:{j:{i:{h:None for h in orth_list} for i in ['quambo','quao','iao1','iao2','quasi']} for j in ['normal','special']} for k in basis_list} 
     for obasis in basis_list:
         quasi = QuasiTransformation(mol, obasis2=obasis, minimal=True)
         names.append(obasis)
@@ -28,10 +31,14 @@ def run_calc(fchkfile):
         for quasitype in ['normal','special']:
             if quasitype=='special':
                 quasi = quasi.new_quasitransformation(num_oldvirtuals=0)
-            newbasis[obasis][quasitype]['quambo'] = LCGOBasis(quasi.mol.obasis, quasi.quambo().T)
-            newbasis[obasis][quasitype]['quao'] = LCGOBasis(quasi.mol.obasis, quasi.quao().T)
-            newbasis[obasis][quasitype]['iao1'] = LCGOBasis(quasi.mol.obasis, quasi.iao(iaotype=1).T)
-            newbasis[obasis][quasitype]['iao2'] = LCGOBasis(quasi.mol.obasis, quasi.iao(iaotype=2).T)
+            newbasis[obasis][quasitype]['quambo']['north'] = LCGOBasis(quasi.mol.obasis, quasi.quambo().T)
+            newbasis[obasis][quasitype]['quao']['north'] = LCGOBasis(quasi.mol.obasis, quasi.quao().T)
+            newbasis[obasis][quasitype]['iao1']['north'] = LCGOBasis(quasi.mol.obasis, quasi.iao(iaotype=1).T)
+            newbasis[obasis][quasitype]['iao2']['north'] = LCGOBasis(quasi.mol.obasis, quasi.iao(iaotype=2).T)
+            newbasis[obasis][quasitype]['quambo']['orth'] = newbasis[obasis][quasitype]['quambo']['north'].orth_all
+            newbasis[obasis][quasitype]['quao']['orth'] = newbasis[obasis][quasitype]['quao']['north'].orth_all
+            newbasis[obasis][quasitype]['iao1']['orth'] = newbasis[obasis][quasitype]['iao1']['north'].orth_all
+            newbasis[obasis][quasitype]['iao2']['orth'] = newbasis[obasis][quasitype]['iao2']['north'].orth_all
             newbasis[obasis][quasitype]['quasi'] = quasi
     # population
     pop = mul.MullikenPopulation(mol)
@@ -46,21 +53,27 @@ def run_calc(fchkfile):
     for obasis in basis_list:
         for quasitype in ['normal', 'special']:
             for qao in quasi_list:
-                # pop
-                quasi = newbasis[obasis][quasitype]['quasi']
-                quasi_mol = quasi.mol
-                # transform the basis
-                new_basis = newbasis[obasis][quasitype][qao]
-                # project mol onto basis
-                quasi_newmol = project_mol(quasi_mol, new_basis)
-                # get pop
-                pop = mul.MullikenPopulation(quasi_newmol, weights='temp')
-                pop.weights = pop.weights_mulliken(quasi.obasis2)
-                results_pop['mulliken'][qao][quasitype][obasis] = pop.mulliken()
-                results_pop['lowdin'][qao][quasitype][obasis] = pop.lowdin()
-                # store name and basis
-                names.append([obasis, quasitype, qao])
-                newbasis_flat.append(newbasis[obasis][quasitype][qao])
+                for orth in orth_list:
+                    # pop
+                    quasi = newbasis[obasis][quasitype]['quasi']
+                    quasi_mol = quasi.mol
+                    # transform the basis
+                    new_basis = newbasis[obasis][quasitype][qao][orth]
+                    # project mol onto basis
+                    quasi_newmol = project_mol(quasi_mol, new_basis)
+                    # get pop
+                    pop = mul.MullikenPopulation(quasi_newmol, weights='temp')
+                    # weights set to 'temp' to prevent weights_mulliken function from running
+                    pop.weights = pop.weights_mulliken(quasi.obasis2)
+                    # store population and name and basis
+                    if orth=='north':
+                        results_pop['mulliken'][qao][quasitype][obasis] = pop.mulliken()
+                        names.append([obasis, quasitype, 'north', qao])
+                        newbasis_flat.append(newbasis[obasis][quasitype][qao]['north'])
+                    elif orth=='orth':
+                        results_pop['lowdin'][qao][quasitype][obasis] = pop.mulliken()
+                        names.append([obasis, quasitype, 'orth', qao])
+                        newbasis_flat.append(newbasis[obasis][quasitype][qao]['orth'])
     # overlap
     minmax = lambda M: np.min(np.amax(M,axis=1))
     results_overlap = np.zeros([len(names), len(names)])
