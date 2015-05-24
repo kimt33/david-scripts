@@ -45,8 +45,9 @@ def run_calc(fchkfile):
     results_pop = {}
     results_pop['mulliken'] = {}
     results_pop['mulliken']['normal'] = pop.mulliken()
+    pop = mul.MullikenPopulation(project_mol(mol, LCGOBasis(mol.obasis).orth_all))
     results_pop['lowdin'] = {}
-    results_pop['lowdin']['normal'] = pop.lowdin()
+    results_pop['lowdin']['normal'] = pop.mulliken()
     for i in ['quambo','quao','iao1','iao2']:
         results_pop['mulliken'][i] = {j:{k:None for k in basis_list} for j in ['normal', 'special']}
         results_pop['lowdin'][i] = {j:{k:None for k in basis_list} for j in ['normal', 'special']}
