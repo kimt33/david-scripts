@@ -17,5 +17,8 @@ def farnaz_format(dirname, filename):
         dirname: string that is the name of the molecule grouping directory
     """
     for dirpath, dirnames, filenames in os.walk(dirname):
-        if len(dirpath.split(os.sep))==3 and filename in filenames:
-            yield os.path.join(dirpath, filename)
+        if len(dirpath.split(os.sep))==3:
+            if filename in filenames:
+                yield os.path.join(dirpath, filename)
+            else:
+                print 'NOT FOUND:',dirpath
