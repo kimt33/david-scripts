@@ -20,14 +20,14 @@ def run_calc(fchkfile):
     quasi_list = ['quambo','quao','iao1','iao2']
     orth_list = ['orth', 'north']
     names = ['atomic basis', 'orth atomic basis']
-    newbasis_flat = [LCGOBasis(mol.obasis).N, LCGOBasis(mol.obasis).orth_all,]
+    newbasis_flat = [LCGOBasis(mol.obasis).normalized, LCGOBasis(mol.obasis).orth_all,]
     # TODO: NORMALIZE and INTRATOMICALLY ORTHOGONALIZE AB's!
     # transformations
     newbasis = {k:{j:{i:{h:None for h in orth_list} for i in ['quambo','quao','iao1','iao2','quasi']} for j in ['normal','special']} for k in basis_list} 
     for obasis in basis_list:
         quasi = QuasiTransformation(mol, obasis2=obasis, minimal=True)
         names.append(obasis)
-        newbasis_flat.append(LCGOBasis(quasi.obasis2).N)
+        newbasis_flat.append(LCGOBasis(quasi.obasis2).normalized)
         for quasitype in ['normal','special']:
             if quasitype=='special':
                 quasi = quasi.new_quasitransformation(num_oldvirtuals=0)
@@ -57,7 +57,7 @@ def run_calc(fchkfile):
                 for orth in orth_list:
                     # pop
                     quasi = newbasis[obasis][quasitype]['quasi']
-                    quasi_mol = quasi.mol
+                    quasi_mol = quasi.mol.select_mo()
                     # transform the basis
                     new_basis = newbasis[obasis][quasitype][qao][orth]
                     # project mol onto basis
