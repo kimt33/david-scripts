@@ -9,7 +9,7 @@ import re
 class G09Input:
     '''class that contains g09 input parameters which allows creation of it
     '''
-    def __init__(self, atoms, coords, method='', basis='', route='', charge=0, spinmult=1, title='', filename='', template='default'):
+    def __init__(self, atoms, coords, method='', basis='', route='', charge=0, spinmult=1, title='', filename='', template='default', mem='1500MB', nprocs='1'):
         '''initializes input object using default settings
 
         atoms
@@ -26,7 +26,8 @@ class G09Input:
         self.basename=self.filename[:-4] #NOTE: assume specified filename has three character extension
         #Link0
         self.chk=self.basename+'.chk'
-        self.mem='1500MB'
+        self.nprocs=nprocs
+        self.mem=mem
         #Route section
         if method!='':
             self.method=method
@@ -86,6 +87,7 @@ class G09Input:
             filename = self.filename
         with open(filename,'w') as fp:
             fp.write('%chk='+self.chk+'\n')
+            fp.write('%nprocs='+self.nprocs+'\n')
             fp.write('%mem='+self.mem+'\n')
             # route
             fp.write('#p '+self.method+'/gen ')
