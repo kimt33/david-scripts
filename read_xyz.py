@@ -1,4 +1,4 @@
-from horton.io.smartreader import *
+from smartreader import *
 import re
 
 class XYZReader:
@@ -25,13 +25,13 @@ class XYZReader:
         """
         re_numatom = re.compile(r'^\s*(\d+)\s*$')
         #re_title = re.compile(r'^\s*(.*)\s*$')
-        re_coords = re.compile(r'^\s*(\w+)\s+([\-\d\w\.eEdD]+)\s+([\-\d\w\.eEdD]+)\s+([\-\d\w\.eEdD]+)\s*$')
+        re_coords = re.compile(r'^\s*(\w+)\s+([\-\d\.eEdD]+)\s+([\-\d\.eEdD]+)\s+([\-\d\.eEdD]+)\s*$')
         item_numatom = Item(re_numatom, max_match=-1)
         #item_title = Item(re_title, header=item_numatom, max_match=1)
         item_coords = Item(re_coords, header=item_numatom, max_match=-1)
         with open(self.filename, 'r') as f:
             for line in f:
-                item_numatom(line)
+                #item_numatom(line)
                 item_coords(line)
                 #item_title(line)
         for i in item_coords.value:
