@@ -1,8 +1,6 @@
 import numpy as np
-import loadpaths
-import name_mol
-from horton.io import data_basis as db
 from horton.context import context
+from horton.io import data_basis as db
 import os
 import re
 
@@ -72,7 +70,7 @@ class G09Input:
                 self.routerest.append(i)
 
         #title section
-        chemformula = name_mol.chemicalformula(atoms)
+        chemformula = ''.join(atoms)
         self.title=title+' '+chemformula+' '+self.method+'/'+self.basis
         #molecule specification (default: 0 1)
         self.charge=charge #difference in charge from neutral
@@ -103,7 +101,7 @@ class G09Input:
             fp.write(str(self.charge)+' '+str(self.spinmultiplicity)+'\n')
             # coord
             for atom,coord in zip(self.atoms,self.coords):
-                line = atom + '{0:>17f}{1:>17f}{2:>17f}'.format(*coord)
+                line = atom + '{0:>17f}{1:>17f}{2:>17f}'.format(*[float(i) for i in coord])
                 fp.write(line+'\n')
             fp.write('\n')
             # basis set
