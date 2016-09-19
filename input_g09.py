@@ -7,7 +7,7 @@ import re
 class G09Input:
     '''class that contains g09 input parameters which allows creation of it
     '''
-    def __init__(self, atoms, coords, method='', basis='', route='', charge=0, spinmult=1, title='', filename='', template='default'):
+    def __init__(self, atoms, coords, method='', basis='', route='', charge=0, spinmult=1, title='', filename='', template='default', nosave=False):
         '''initializes input object using default settings
 
         atoms
@@ -25,6 +25,7 @@ class G09Input:
         #Link0
         self.chk=self.basename+'.chk'
         self.mem='1500MB'
+        self.nosave=nosave
         #Route section
         if method!='':
             self.method=method
@@ -34,6 +35,13 @@ class G09Input:
             self.basis = basis
         else:
             self.basis = 'aug-cc-pvtz'
+        self.basisinfo = None
+        for ext in ['gbs','nwchem','davidh5']:
+            if os.path.isfile(context.get_fn('basis/{0}.{1}'.format(self.basis,ext))):
+                path = context.get_fn('basis/{0}.{1}'.format(self.basis,ext))
+                self.basis = 'gen'
+                self.basisinfo = db.DataBasis(path, fileformat=os.path.splitext(path)[1][1:])
+                break
         # this needs to be better
         if template == 'default':
             route = 'scf=(tight,xqc,fermi) integral=grid=ultrafine nosymmetry ' + route
@@ -83,10 +91,15 @@ class G09Input:
         if filename == '':
             filename = self.filename
         with open(filename,'w') as fp:
-            fp.write('%chk='+self.chk+'\n')
-            fp.write('%mem='+self.mem+'\n')
+            if self.nosave:
+                fp.write('%oldchk='+self.chk+'\n')
+                fp.write('%mem='+self.mem+'\n')
+                fp.write('%nosave\n')
+            else:
+                fp.write('%chk='+self.chk+'\n')
+                fp.write('%mem='+self.mem+'\n')
             # route
-            fp.write('#p '+self.method+'/gen ')
+            fp.write('#p {0}/{1} '.format(self.method, self.basis))
             routerest = ''
             for keyword, val in self.keywords.iteritems():
                 if val == '':
@@ -105,14 +118,8 @@ class G09Input:
                 fp.write(line+'\n')
             fp.write('\n')
             # basis set
-            for ext in ['gbs','nwchem','davidh5']:
-                if os.path.isfile(context.get_fn('basis/{0}.{1}'.format(self.basis,ext))):
-                    path = context.get_fn('basis/{0}.{1}'.format(self.basis,ext))
-                    break
-            else:
-                raise AssertionError, 'given basis {0} does not exist in horton database'.format(self.basis)
-            basisinfo = db.DataBasis(path, fileformat=os.path.splitext(path)[1][1:])
-            fp.write(basisinfo.write_gbs(self.atoms))
+            if self.basis == 'gen':
+                fp.write(self.basisinfo.write_gbs(self.atoms))
             fp.write('\n\n\n')
 
     def scan_geometry_atom(self,atomindex,coord1,coord2,numsteps):
